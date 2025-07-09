@@ -7,7 +7,9 @@ import Result from "./components/Result";
 import AboutUs from "./components/AboutUs";
 import UserAnalytics from "./components/UserAnalytics";
 import Contact from "./components/Contact";
-
+import Dashboard from "./Dashboard"; // Adjust the path as needed
+import Chatbot from "./components/Chatbot";
+import "./app.css"
 function App() {
   return (
     <BrowserRouter>
@@ -20,7 +22,11 @@ function App() {
         <Route path="/about" element={<AboutUs />} />
         <Route path="/user" element={<UserAnalytics />} />
         <Route path="/contact" element={<Contact />} />
+
+        <Route path="/" element={<AuthPage />} />
+        <Route path="/dashboard" element={<Dashboard />} />
       </Routes>
+      <Chatbot/>
     </BrowserRouter>
   );
 }

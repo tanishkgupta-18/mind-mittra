@@ -1,11 +1,21 @@
 import { useEffect, useState } from "react";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
 export default function UserAnalytics() {
   const [loading, setLoading] = useState(true);
   const [latestScore, setLatestScore] = useState(null);
-  const [totalPossible, setTotalPossible] = useState(30); // 10 questions × max 3 points
+  const [totalPossible, setTotalPossible] = useState(30);
   const [level, setLevel] = useState("");
   const [error, setError] = useState(null);
+  const [scoreHistory, setScoreHistory] = useState([]);
 
   const emojiMap = {
     Minimal: "😊",
@@ -15,25 +25,50 @@ export default function UserAnalytics() {
   };
 
   useEffect(() => {
-    fetch("http://localhost:5000/user-summary", {
-      method: "GET",
-      credentials: "include", // include cookies for session
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to fetch data");
-        return res.json();
-      })
-      .then((data) => {
-        setLatestScore(data.score);
-        setLevel(data.severity);
+    const userId = localStorage.getItem("user_id");
+    if (!userId) {
+      setError("User ID not found. Please log in.");
+      setLoading(false);
+      return;
+    }
+
+    const fetchData = async () => {
+      try {
+        const [summaryRes, historyRes] = await Promise.all([
+          fetch(`http://localhost:5000/latest-score/${userId}`),
+          fetch(`http://localhost:5000/user-scores/${userId}`),
+
+        ]);
+
+        if (!summaryRes.ok) throw new Error("Failed to fetch latest score");
+        if (!historyRes.ok) throw new Error("Failed to fetch score history");
+
+        const summaryData = await summaryRes.json();
+        const historyData = await historyRes.json();
+
+        setLatestScore(summaryData.score);
+        setLevel(summaryData.severity);
+        if (Array.isArray(historyData)) {
+          setScoreHistory(historyData);
+        }
+
         setLoading(false);
-      })
-      .catch((err) => {
+      } catch (err) {
         console.error(err);
         setError("Could not fetch user data. Please log in.");
         setLoading(false);
-      });
+      }
+    };
+
+    fetchData();
   }, []);
+
+  const getBarColor = () => {
+    const percentage = (latestScore / totalPossible) * 100;
+    if (percentage <= 33) return "#4CAF50"; // green
+    if (percentage <= 66) return "#FFC107"; // yellow
+    return "#F44336"; // red
+  };
 
   if (loading) {
     return (
@@ -80,9 +115,26 @@ export default function UserAnalytics() {
             style={{
               ...styles.progressBar,
               width: `${(latestScore / totalPossible) * 100}%`,
+              backgroundColor: getBarColor(),
             }}
           />
         </div>
+
+        <h2 style={styles.label}>Score Over Time</h2>
+        <ResponsiveContainer width="100%" height={250}>
+          <LineChart data={scoreHistory}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="id" />
+            <YAxis domain={[0, totalPossible]} />
+            <Tooltip />
+            <Line
+              type="monotone"
+              dataKey="score"
+              stroke="#8884d8"
+              strokeWidth={3}
+            />
+          </LineChart>
+        </ResponsiveContainer>
 
         <p style={styles.note}>
           This result is based on your last questionnaire. If you're feeling
@@ -145,7 +197,6 @@ const styles = {
   },
   progressBar: {
     height: "100%",
-    backgroundColor: "#a761d6",
     transition: "width 0.5s ease-in-out",
   },
   note: {
