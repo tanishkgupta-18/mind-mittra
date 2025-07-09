@@ -1,0 +1,11 @@
+Flask
+Flask-Cors
+Flask-SQLAlchemy
+Werkzeug
+#
+scikit-learn
+ numpy 
+ pandas 
+ pickle-mixin 
+ twilio 
+ google-generativeai
